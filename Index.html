@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Biblioteca MP3</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #f0f0f0;
+            color: #000;
+            padding: 20px;
+            max-width: 400px;
+            margin: auto;
+        }
+        .box {
+            border: 2px solid #000;
+            padding: 15px;
+            background: #fff;
+        }
+        button {
+            font-family: monospace;
+            padding: 8px 12px;
+            margin: 2px;
+            cursor: pointer;
+        }
+        .controls {
+            margin: 15px 0;
+        }
+        ul {
+            list-style-type: square;
+            padding-left: 20px;
+        }
+        li {
+            cursor: pointer;
+            margin-bottom: 6px;
+        }
+        li.active {
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        .back-btn {
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2>► Mi Reproductor</h2>
+        <p id="now-playing">Canción: Ninguna seleccionada</p>
+        
+        <audio id="audio-player"></audio>
+
+        <!-- Controles de Reproducción -->
+        <div class="controls">
+            <button onclick="prevTrack()">⏮ Anterior</button>
+            <button onclick="togglePlay()" id="play-btn">▶ Play</button>
+            <button onclick="nextTrack()">Siguiente ⏭</button>
+        </div>
+
+        <div>
+            <label for="volume">Volumen:</label>
+            <input type="range" id="volume" min="0" max="1" step="0.1" value="1" onchange="setVolume(this.value)">
+        </div>
+
+        <hr>
+
+        <!-- Sección Dinámica: Carpetas / Canciones -->
+        <div id="view-container">
+            <h3 id="view-title">📁 Mis Álbumes / Carpetas</h3>
+            <ul id="list-content"></ul>
+        </div>
+    </div>
+
+    <script>
+        // 1. AQUÍ ORGANIZAS TU MÚSICA POR CARPETAS / ÁLBUMES
+        const library = [
+            {
+                albumName: "📁 Deftones",
+                tracks: [
+                    { title: "01. around the fur ", src: "https://res.cloudinary.com/woeus5ue/video/upload/v1787068781/Deftones_-_Around_The_Fur_Full_Album.mp3" },
+                    { title: "02. white pony", src: "https://res.cloudinary.com/woeus5ue/video/upload/v1787069406/Deftones_-_White_Pony_Full_Album.mp3" },
+                    { title: "03. Mascot", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/03_mascot.mp3" },
+                    { title: "04. Around the Fur", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/04_around_the_fur.mp3" },
+                    { title: "05. Rickets", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/05_rickets.mp3" },
+                    { title: "06. Be Quiet and Drive (Far Away)", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/06_be_quiet_and_drive.mp3" },
+                    { title: "07. Lotion", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/07_lotion.mp3" },
+                    { title: "08. Dai the Flu", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/08_dai_the_flu.mp3" },
+                    { title: "09. Headup", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/09_headup.mp3" },
+                    { title: "10. MX", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/10_mx.mp3" }
+                ]
+            },
+            {
+                albumName: "📁 Otra Carpeta / Disco",
+                tracks: [
+                    { title: "01. Cancion A", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/cancionA.mp3" },
+                    { title: "02. Cancion B", src: "https://res.cloudinary.com/tu_usuario/video/upload/v1234/cancionB.mp3" }
+                ]
+            }
+        ];
+
+        // Estado del reproductor
+        let currentAlbumIndex = 0;
+        let currentTrackIndex = 0;
+
+        const player = document.getElementById('audio-player');
+        const playBtn = document.getElementById('play-btn');
+        const nowPlaying = document.getElementById('now-playing');
+        const listContent = document.getElementById('list-content');
+        const viewTitle = document.getElementById('view-title');
+
+        // Renderiza la lista de carpetas/álbumes principales
+        function showAlbums() {
+            viewTitle.textContent = "📁 Carpetas disponibles";
+            listContent.innerHTML = "";
+
+            library.forEach((album, albumIndex) => {
+                const li = document.createElement('li');
+                li.textContent = album.albumName;
+                li.onclick = () => showTracks(albumIndex);
+                listContent.appendChild(li);
+            });
+        }
+
+        // Renderiza las canciones dentro de la carpeta elegida
+        function showTracks(albumIndex) {
+            viewTitle.textContent = "🎵 " + library[albumIndex].albumName.replace("📁 ", "");
+            listContent.innerHTML = "";
+
+            // Botón para regresar a las carpetas
+            const backBtn = document.createElement('button');
+            backBtn.textContent = "⬅ Volver a Carpetas";
+            backBtn.className = "back-btn";
+            backBtn.onclick = () => showAlbums();
+            listContent.appendChild(backBtn);
+
+            // Mostrar canciones
+            library[albumIndex].tracks.forEach((track, trackIndex) => {
+                const li = document.createElement('li');
+                li.textContent = track.title;
+
+                // Marcar en negrita si es la que está sonando actualmente
+                if (currentAlbumIndex === albumIndex && currentTrackIndex === trackIndex && player.src) {
+                    li.classList.add('active');
+                }
+
+                li.onclick = () => {
+                    playTrack(albumIndex, trackIndex);
+                };
+                listContent.appendChild(li);
+            });
+        }
+
+        // Reproduce una canción en específico
+        function playTrack(albumIndex, trackIndex) {
+            currentAlbumIndex = albumIndex;
+            currentTrackIndex = trackIndex;
+
+            const currentTrack = library[currentAlbumIndex].tracks[currentTrackIndex];
+            player.src = currentTrack.src;
+            nowPlaying.textContent = "Canción: " + currentTrack.title;
+            
+            player.play();
+            playBtn.textContent = "⏸ Pausa";
+
+            // Refrescar vista si estamos dentro del álbum
+            showTracks(albumIndex);
+        }
+
+        function togglePlay() {
+            if (!player.src) {
+                // Si no hay nada sonando, reproduce la primera del primer álbum
+                playTrack(0, 0);
+                return;
+            }
+            
+            if (player.paused) {
+                player.play();
+                playBtn.textContent = "⏸ Pausa";
+            } else {
+                player.pause();
+                playBtn.textContent = "▶ Play";
+            }
+        }
+
+        function nextTrack() {
+            const currentAlbum = library[currentAlbumIndex];
+            // Si hay siguiente canción en el álbum actual, pasa a ella
+            if (currentTrackIndex + 1 < currentAlbum.tracks.length) {
+                playTrack(currentAlbumIndex, currentTrackIndex + 1);
+            } else {
+                // Si llegó al final del álbum, vuelve a la pista 0
+                playTrack(currentAlbumIndex, 0);
+            }
+        }
+
+        function prevTrack() {
+            const currentAlbum = library[currentAlbumIndex];
+            if (currentTrackIndex - 1 >= 0) {
+                playTrack(currentAlbumIndex, currentTrackIndex - 1);
+            } else {
+                playTrack(currentAlbumIndex, currentAlbum.tracks.length - 1);
+            }
+        }
+
+        function setVolume(value) {
+            player.volume = value;
+        }
+
+        // Al terminar la canción, pasa AUTOMÁTICAMENTE a la siguiente del mismo disco
+        player.onended = () => nextTrack();
+
+        // Iniciar en la vista de carpetas
+        showAlbums();
+    </script>
+</body>
+</html>
